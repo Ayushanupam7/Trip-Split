@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Expense, supabase } from "../lib/supabase";
-import { DollarSign, Users, TrendingUp, Pencil } from "lucide-react";
+import { DollarSign, Users, TrendingUp, Pencil, Wallet } from "lucide-react";
 
 interface SummaryProps {
   expenses: Expense[];
@@ -17,13 +17,14 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
 
   const uniquePayers = Object.keys(payerTotals);
   const numberOfPeople = uniquePayers.length;
+
   const fallbackBudget = numberOfPeople > 0 ? totalExpenses / numberOfPeople : 0;
 
   const [personBudgets, setPersonBudgets] = useState<Record<string, number>>({});
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // ✅ Fetch budgets from Supabase
+  // ✅ Fetch budgets from DB
   const fetchBudgets = async () => {
     const { data, error } = await supabase.from("person_budgets").select("*");
 
@@ -33,11 +34,10 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
     }
   };
 
-  // ✅ Auto-create missing budget rows for new payers
+  // ✅ Add missing budgets automatically
   const syncMissingBudgets = async () => {
     const { data } = await supabase.from("person_budgets").select("payer");
-
-    const existing = new Set(data?.map((d: any) => d.payer));
+    const existing = new Set(data?.map((d) => d.payer));
 
     for (const payer of uniquePayers) {
       if (!existing.has(payer)) {
@@ -74,6 +74,12 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
     }
   };
 
+  const totalBudget = uniquePayers.length
+    ? Object.values(personBudgets).reduce((a, b) => a + b, 0)
+    : 0;
+
+  const remainingBudget = totalBudget - totalExpenses;
+
   if (expenses.length === 0) {
     return (
       <div
@@ -92,21 +98,34 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
     <div className="space-y-6">
 
       {/* ✅ Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-6">
+
+        {/* ✅ Total Expenses */}
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-4 sm:p-6 text-white">
           <h3 className="text-xs sm:text-sm opacity-90">Total Expenses</h3>
           <p className="text-2xl sm:text-3xl font-bold">₹{totalExpenses.toFixed(2)}</p>
         </div>
 
+        {/* ✅ Number of People */}
         <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md p-4 sm:p-6 text-white">
           <h3 className="text-xs sm:text-sm opacity-90">Number of People</h3>
           <p className="text-2xl sm:text-3xl font-bold">{numberOfPeople}</p>
         </div>
 
+        {/* ✅ Total Budget */}
         <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg shadow-md p-4 sm:p-6 text-white">
-          <h3 className="text-xs sm:text-sm opacity-90">Default Budget</h3>
-          <p className="text-2xl sm:text-3xl font-bold">₹{fallbackBudget.toFixed(2)}</p>
+          <h3 className="text-xs sm:text-sm font-medium opacity-90">Total Budget</h3>
+          <p className="text-2xl sm:text-3xl font-bold">₹{totalBudget.toFixed(2)}</p>
         </div>
+
+        {/* ✅ Remaining Budget */}
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-4 sm:p-6 text-white">
+          <h3 className="text-xs sm:text-sm opacity-90">Remaining Budget</h3>
+          <p className="text-2xl sm:text-3xl font-bold">
+            {remainingBudget >= 0 ? `₹${remainingBudget.toFixed(2)}` : `Over by ₹${Math.abs(remainingBudget).toFixed(2)}`}
+          </p>
+        </div>
+
       </div>
 
       {/* ✅ Edit Budgets Button */}
@@ -127,6 +146,7 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
           {uniquePayers.map((payer) => {
             const spent = payerTotals[payer];
             const budget = personBudgets[payer] ?? fallbackBudget;
+            const remain = budget - spent;
 
             return (
               <div
@@ -146,6 +166,11 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
                   <p className={`font-semibold ${darkMode ? "text-gray-200" : "text-gray-900"}`}>
                     Spent: ₹{spent.toFixed(2)}
                   </p>
+                  <p className={`text-xs ${
+                    remain >= 0 ? "text-green-400" : "text-red-400"
+                  }`}>
+                    Remaining: {remain >= 0 ? `₹${remain.toFixed(2)}` : `Over by ₹${Math.abs(remain).toFixed(2)}`}
+                  </p>
                 </div>
               </div>
             );
@@ -153,7 +178,7 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
         </div>
       </div>
 
-      {/* ✅ Budget Modal */}
+      {/* ✅ Budget Edit Modal */}
       {budgetModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
           <div className={`p-6 rounded-lg w-80 ${darkMode ? "bg-gray-900" : "bg-white"}`}>
