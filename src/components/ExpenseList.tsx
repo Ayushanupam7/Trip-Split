@@ -26,8 +26,6 @@ export default function ExpenseList({
   onExpenseChanged,
   darkMode,
 }: ExpenseListProps) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Expense>>({});
   const [loading, setLoading] = useState(false);
 
   // Range modal
@@ -44,6 +42,13 @@ export default function ExpenseList({
     show: false,
     expense: null,
   });
+
+  // Edit modal
+  const [editModal, setEditModal] = useState<{ show: boolean; expense: Expense | null }>({
+    show: false,
+    expense: null,
+  });
+  const [editForm, setEditForm] = useState<Partial<Expense>>({});
 
   // ---------- Helpers ----------
   const toLocalYMD = (d: Date) =>
@@ -76,7 +81,7 @@ export default function ExpenseList({
 
   // ---------- CRUD ----------
   const startEdit = (expense: Expense) => {
-    setEditingId(expense.id);
+    setEditModal({ show: true, expense });
     setEditForm({
       payer: expense.payer,
       category: expense.category,
@@ -87,12 +92,13 @@ export default function ExpenseList({
   };
 
   const cancelEdit = () => {
-    setEditingId(null);
+    setEditModal({ show: false, expense: null });
     setEditForm({});
   };
 
-  const saveEdit = async (id: string) => {
-    if (!editForm.payer || !editForm.amount || editForm.amount <= 0) return;
+  const saveEdit = async () => {
+    if (!editModal.expense || !editForm.payer || !editForm.amount || editForm.amount <= 0) return;
+    
     setLoading(true);
     try {
       await supabase
@@ -104,7 +110,7 @@ export default function ExpenseList({
           description: (editForm.description || "").trim(),
           date: new Date(editForm.date!).toISOString(),
         })
-        .eq("id", id);
+        .eq("id", editModal.expense.id);
       cancelEdit();
       onExpenseChanged();
     } finally {
@@ -133,7 +139,7 @@ export default function ExpenseList({
     setDeleteModal({ show: false, expense: null });
   };
 
-  // ---------- Row sub-component (fixes swipe hook usage) ----------
+  // ---------- Row sub-component ----------
   function ExpenseRow({
     exp,
   }: {
@@ -147,179 +153,57 @@ export default function ExpenseList({
       delta: 60,
     });
 
-    const isEditing = editingId === exp.id;
-
     return (
-      <>
-        <tr
-          {...(!isEditing ? handlers : {})}
-          className={`touch-pan-x transition-all ${
-            darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
-          }`}
-        >
-          {isEditing ? (
-            <>
-              <td className="px-3 sm:px-6 py-4">
-                <input
-                  type="date"
-                  value={editForm.date}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, date: e.target.value })
-                  }
-                  className={`w-full px-2 py-1 border rounded text-xs sm:text-sm ${
-                    darkMode
-                      ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400"
-                      : "border-gray-300 bg-white text-gray-900 placeholder-gray-500"
-                  }`}
-                />
-              </td>
+      <tr
+        {...handlers}
+        className={`touch-pan-x transition-all ${
+          darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
+        }`}
+      >
+        <td className={`px-3 sm:px-6 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+          {formatDate(exp.date)}
+        </td>
 
-              <td className="px-3 sm:px-6 py-4">
-                <input
-                  type="text"
-                  value={editForm.payer}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, payer: e.target.value })
-                  }
-                  placeholder="Payer name"
-                  className={`w-full px-2 py-1 border rounded text-xs sm:text-sm ${
-                    darkMode
-                      ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400"
-                      : "border-gray-300 bg-white text-gray-900 placeholder-gray-500"
-                  }`}
-                />
-              </td>
+        <td className={`px-3 sm:px-6 py-3 font-medium ${darkMode ? "text-gray-200" : "text-gray-900"}`}>
+          {exp.payer}
+        </td>
 
-              <td className="px-3 sm:px-6 py-4">
-                <select
-                  value={editForm.category}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, category: e.target.value })
-                  }
-                  className={`w-full px-2 py-1 border rounded text-xs sm:text-sm ${
-                    darkMode
-                      ? "bg-gray-600 border-gray-500 text-white"
-                      : "border-gray-300 bg-white text-gray-900"
-                  }`}
-                >
-                  {categories
-                    .filter((c) => c !== "All")
-                    .map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                </select>
-              </td>
+        <td className="px-3 sm:px-6 py-3">
+          <span
+            className={`px-2 py-1 text-xs font-medium rounded-full ${
+              darkMode ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"
+            }`}
+          >
+            {exp.category}
+          </span>
+        </td>
 
-              <td className="px-3 sm:px-6 py-4">
-                <input
-                  type="number"
-                  value={editForm.amount}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      amount: parseFloat(e.target.value),
-                    })
-                  }
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  className={`w-full px-2 py-1 border rounded text-xs sm:text-sm ${
-                    darkMode
-                      ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400"
-                      : "border-gray-300 bg-white text-gray-900 placeholder-gray-500"
-                  }`}
-                />
-              </td>
+        <td className={`px-3 sm:px-6 py-3 font-semibold ${darkMode ? "text-gray-200" : "text-gray-900"}`}>
+          ₹{exp.amount.toFixed(2)}
+        </td>
 
-              <td className="hidden sm:table-cell px-3 sm:px-6 py-4">
-                <input
-                  type="text"
-                  value={editForm.description}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      description: e.target.value,
-                    })
-                  }
-                  placeholder="Description (optional)"
-                  className={`w-full px-2 py-1 border rounded text-xs sm:text-sm ${
-                    darkMode
-                      ? "bg-gray-600 border-gray-500 text-white placeholder-gray-400"
-                      : "border-gray-300 bg-white text-gray-900 placeholder-gray-500"
-                  }`}
-                />
-              </td>
+        <td className={`hidden sm:table-cell px-3 sm:px-6 py-3 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+          {exp.description || "-"}
+        </td>
 
-              <td className="px-3 sm:px-6 py-4 text-right space-x-1">
-                <button
-                  onClick={() => saveEdit(exp.id)}
-                  disabled={loading}
-                  className="inline-flex items-center px-2 py-1 rounded text-xs shadow-sm bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Save size={14} />
-                </button>
-                <button
-                  onClick={cancelEdit}
-                  disabled={loading}
-                  className={`inline-flex items-center px-2 py-1 rounded text-xs shadow-sm transition-colors ${
-                    darkMode
-                      ? "bg-gray-600 hover:bg-gray-500 text-white disabled:opacity-50"
-                      : "bg-gray-400 hover:bg-gray-500 text-white disabled:opacity-50"
-                  }`}
-                >
-                  <X size={14} />
-                </button>
-              </td>
-            </>
-          ) : (
-            <>
-              <td className={`px-3 sm:px-6 py-3 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
-                {formatDate(exp.date)}
-              </td>
-
-              <td className={`px-3 sm:px-6 py-3 font-medium ${darkMode ? "text-gray-200" : "text-gray-900"}`}>
-                {exp.payer}
-              </td>
-
-              <td className="px-3 sm:px-6 py-3">
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${
-                    darkMode ? "bg-blue-900 text-blue-200" : "bg-blue-100 text-blue-800"
-                  }`}
-                >
-                  {exp.category}
-                </span>
-              </td>
-
-              <td className={`px-3 sm:px-6 py-3 font-semibold ${darkMode ? "text-gray-200" : "text-gray-900"}`}>
-                ₹{exp.amount.toFixed(2)}
-              </td>
-
-              <td className={`hidden sm:table-cell px-3 sm:px-6 py-3 ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
-                {exp.description || "-"}
-              </td>
-
-              {/* Desktop action buttons */}
-              <td className="px-3 sm:px-6 py-3 text-right hidden sm:flex gap-2">
-                <button
-                  onClick={() => startEdit(exp)}
-                  className="px-2 py-1 rounded text-xs bg-blue-600 hover:bg-blue-700 text-white shadow transition-colors"
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  onClick={() => confirmDelete(exp)}
-                  className="px-2 py-1 rounded text-xs bg-red-600 hover:bg-red-700 text-white shadow transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </td>
-            </>
-          )}
-        </tr>
-      </>
+        {/* Action buttons - visible on all screen sizes */}
+        <td className="px-3 sm:px-6 py-3 text-right">
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => startEdit(exp)}
+              className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-600 hover:bg-blue-700 text-white shadow transition-colors"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              onClick={() => confirmDelete(exp)}
+              className="inline-flex items-center px-2 py-1 rounded text-xs bg-red-600 hover:bg-red-700 text-white shadow transition-colors"
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
+        </td>
+      </tr>
     );
   }
 
@@ -396,6 +280,149 @@ export default function ExpenseList({
           </button>
         </div>
       </div>
+
+      {/* Edit Expense Modal */}
+      {editModal.show && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className={`p-6 rounded-lg w-full max-w-md border shadow-xl ${
+            darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
+          }`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className={`text-lg font-bold ${darkMode ? "text-white" : "text-gray-800"}`}>
+                Edit Expense
+              </h3>
+              <button
+                onClick={cancelEdit}
+                className={`p-1 rounded-full transition-colors ${
+                  darkMode ? "hover:bg-gray-700" : "hover:bg-gray-200"
+                }`}
+              >
+                <X size={20} className={darkMode ? "text-gray-400" : "text-gray-500"} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  Date *
+                </label>
+                <input
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                  className={`w-full p-2 border rounded mt-1 transition-colors ${
+                    darkMode 
+                      ? "bg-gray-800 border-gray-600 text-white focus:border-blue-500" 
+                      : "bg-white border-gray-300 focus:border-blue-500"
+                  }`}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  Payer *
+                </label>
+                <input
+                  type="text"
+                  value={editForm.payer}
+                  onChange={(e) => setEditForm({ ...editForm, payer: e.target.value })}
+                  placeholder="Enter payer name"
+                  className={`w-full p-2 border rounded mt-1 transition-colors ${
+                    darkMode 
+                      ? "bg-gray-800 border-gray-600 text-white focus:border-blue-500 placeholder-gray-400" 
+                      : "bg-white border-gray-300 focus:border-blue-500 placeholder-gray-500"
+                  }`}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  Category *
+                </label>
+                <select
+                  value={editForm.category}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  className={`w-full p-2 border rounded mt-1 transition-colors ${
+                    darkMode 
+                      ? "bg-gray-800 border-gray-600 text-white focus:border-blue-500" 
+                      : "bg-white border-gray-300 focus:border-blue-500"
+                  }`}
+                  required
+                >
+                  {categories
+                    .filter((c) => c !== "All")
+                    .map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  Amount (₹) *
+                </label>
+                <input
+                  type="number"
+                  value={editForm.amount}
+                  onChange={(e) => setEditForm({ ...editForm, amount: parseFloat(e.target.value) || 0 })}
+                  step="0.01"
+                  min="0"
+                  placeholder="0.00"
+                  className={`w-full p-2 border rounded mt-1 transition-colors ${
+                    darkMode 
+                      ? "bg-gray-800 border-gray-600 text-white focus:border-blue-500 placeholder-gray-400" 
+                      : "bg-white border-gray-300 focus:border-blue-500 placeholder-gray-500"
+                  }`}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className={`text-sm font-medium ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
+                  Description
+                </label>
+                <textarea
+                  value={editForm.description || ""}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="Enter description (optional)"
+                  rows={3}
+                  className={`w-full p-2 border rounded mt-1 transition-colors resize-none ${
+                    darkMode 
+                      ? "bg-gray-800 border-gray-600 text-white focus:border-blue-500 placeholder-gray-400" 
+                      : "bg-white border-gray-300 focus:border-blue-500 placeholder-gray-500"
+                  }`}
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={cancelEdit}
+                disabled={loading}
+                className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
+                  darkMode
+                    ? "bg-gray-700 hover:bg-gray-600 text-white disabled:opacity-50"
+                    : "bg-gray-200 hover:bg-gray-300 text-gray-800 disabled:opacity-50"
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={loading || !editForm.payer || !editForm.amount || editForm.amount <= 0}
+                className="px-4 py-2 rounded text-sm font-medium bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+              >
+                <Save size={16} />
+                {loading ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {deleteModal.show && (
