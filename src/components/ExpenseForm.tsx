@@ -1,48 +1,72 @@
-import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect, useRef } from "react";
+import { Plus } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 interface ExpenseFormProps {
   onExpenseAdded: () => void;
   darkMode: boolean;
 }
 
-const categories = ['Food', 'Travel', 'Hotel', 'Tickets', 'Entertainment', 'Shopping', 'Other'];
+const categories = [
+  "Food",
+  "Travel",
+  "Hotel",
+  "Tickets",
+  "Entertainment",
+  "Shopping",
+  "Other",
+];
 
 export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormProps) {
-  const [payer, setPayer] = useState('');
+  const [payer, setPayer] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [allPayers, setAllPayers] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
 
-  const [category, setCategory] = useState('Food');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [category, setCategory] = useState("Food");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+
+  // ✅ Correct today date without timezone shift
+  const [date, setDate] = useState(() => {
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset()); 
+    return today.toISOString().split("T")[0];
+  });
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  // ✅ Fetch past payer names
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // ✅ Fetch payers + last used category
   useEffect(() => {
-    const fetchPayers = async () => {
+    const fetchInitialData = async () => {
       const { data, error } = await supabase
-        .from('expenses')
-        .select('payer')
-        .order('created_at', { ascending: false });
+        .from("expenses")
+        .select("payer, category")
+        .order("created_at", { ascending: false })
+        .limit(50);
 
       if (!error && data) {
         const unique = [...new Set(data.map((item) => item.payer.trim()))];
         setAllPayers(unique);
+
+        if (data.length > 0 && data[0].category) {
+          setCategory(data[0].category);
+        }
       }
     };
 
-    fetchPayers();
+    fetchInitialData();
   }, []);
 
-  // ✅ Filter suggestions when typing
+  // ✅ Live suggestions filter
   useEffect(() => {
-    if (payer.trim() === '') {
+    if (payer.trim() === "") {
       setSuggestions([]);
+      setActiveIndex(-1);
       return;
     }
 
@@ -51,54 +75,95 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
     );
 
     setSuggestions(filtered);
+    setActiveIndex(filtered.length > 0 ? 0 : -1);
   }, [payer, allPayers]);
 
+  // ✅ Keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (suggestions.length > 0) {
+        setActiveIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+      }
+    }
+
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (suggestions.length > 0) {
+        setActiveIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+      }
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (activeIndex >= 0 && activeIndex < suggestions.length) {
+        handleSelectSuggestion(suggestions[activeIndex]);
+      }
+    }
+
+    if (e.key === "Escape") {
+      setShowSuggestions(false);
+      setActiveIndex(-1);
+    }
+  };
+
+  // ✅ Select suggestion
   const handleSelectSuggestion = (name: string) => {
     setPayer(name);
     setShowSuggestions(false);
+    setActiveIndex(-1);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!payer || !amount || parseFloat(amount) <= 0) {
-      setError('Please fill in all required fields with valid values');
+      setError("Please fill in all required fields with valid values");
       return;
     }
 
     setLoading(true);
 
     try {
-      const { error: insertError } = await supabase.from('expenses').insert([
+      const todayFixed = new Date(date);
+      todayFixed.setMinutes(todayFixed.getMinutes() - todayFixed.getTimezoneOffset());
+
+      const { error: insertError } = await supabase.from("expenses").insert([
         {
           payer: payer.trim(),
           category,
           amount: parseFloat(amount),
           description: description.trim(),
-          date: new Date(date).toISOString(),
+          date: todayFixed.toISOString(),
         },
       ]);
 
       if (insertError) throw insertError;
 
-      setPayer('');
-      setCategory('Food');
-      setAmount('');
-      setDescription('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setPayer("");
+      setAmount("");
+      setDescription("");
+
+      // ✅ Reset to correct local today again
+      const newToday = new Date();
+      newToday.setMinutes(newToday.getMinutes() - newToday.getTimezoneOffset());
+      setDate(newToday.toISOString().split("T")[0]);
+
       onExpenseAdded();
     } catch (err: any) {
-      setError(err.message || 'Failed to add expense');
+      setError(err.message || "Failed to add expense");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className={`rounded-lg shadow-md p-4 sm:p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+    <div className={`rounded-lg shadow-md p-4 sm:p-6 ${darkMode ? "bg-gray-800" : "bg-white"}`}>
       
-      <h2 className={`text-xl sm:text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+      <h2 className={`text-xl sm:text-2xl font-bold mb-4 ${darkMode ? "text-white" : "text-gray-800"}`}>
         Add New Expense
       </h2>
 
@@ -109,92 +174,101 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-
-        {/* ✅ PAYER SUGGESTION FIELD */}
+        
+        {/* ✅ PAYER FIELD */}
         <div className="relative">
           <label
-            htmlFor="payer"
-            className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            className={`block text-sm font-medium mb-1 ${
+              darkMode ? "text-gray-300" : "text-gray-700"
+            }`}
           >
             Payer Name *
           </label>
 
           <input
             type="text"
-            id="payer"
             value={payer}
+            ref={inputRef}
             onChange={(e) => {
               setPayer(e.target.value);
               setShowSuggestions(true);
             }}
-            placeholder="Who paid?"
+            onKeyDown={handleKeyDown}
+            placeholder="Start typing name..."
             autoComplete="off"
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              darkMode
-                ? 'bg-gray-700 border-gray-600 text-white'
-                : 'border-gray-300 bg-white text-gray-900'
+              darkMode ? "bg-gray-700 border-gray-600 text-white" : "bg-white border-gray-300 text-gray-900"
             }`}
             required
           />
 
-          {/* ✅ Suggestion Dropdown */}
-          {showSuggestions && suggestions.length > 0 && (
+          {showSuggestions && (
             <ul
-              className={`absolute z-20 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md mt-1 shadow-lg max-h-40 overflow-auto`}
+              className={`absolute z-20 w-full rounded-md mt-1 shadow-lg max-h-40 overflow-auto border ${
+                darkMode
+                  ? "bg-gray-800 border-gray-700 shadow-black/50"
+                  : "bg-white border-gray-200 shadow-md"
+              }`}
             >
-              {suggestions.map((name, index) => (
+              {suggestions.length === 0 ? (
                 <li
-                  key={index}
-                  onClick={() => handleSelectSuggestion(name)}
-                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 ${
-                    darkMode ? 'text-white' : 'text-gray-700'
+                  className={`px-3 py-2 text-sm ${
+                    darkMode ? "text-gray-400" : "text-gray-600"
                   }`}
                 >
-                  {name}
+                  No match found
                 </li>
-              ))}
+              ) : (
+                suggestions.map((name, index) => (
+                  <li
+                    key={index}
+                    onClick={() => handleSelectSuggestion(name)}
+                    className={`px-3 py-2 cursor-pointer transition-colors ${
+                      darkMode
+                        ? index === activeIndex
+                          ? "bg-gray-700 text-white"
+                          : "text-gray-200 hover:bg-gray-700"
+                        : index === activeIndex
+                        ? "bg-gray-100"
+                        : "text-gray-800 hover:bg-gray-100"
+                    }`}
+                  >
+                    {name}
+                  </li>
+                ))
+              )}
             </ul>
           )}
         </div>
 
-        {/* ✅ REST OF INPUTS SAME AS YOUR ORIGINAL CODE */}
+        {/* ✅ CATEGORY / AMOUNT / DATE */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label
-              htmlFor="category"
-              className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-            >
+            <label className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               Category *
             </label>
             <select
-              id="category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 darkMode
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'border-gray-300 bg-white text-gray-900'
+                  ? "bg-gray-700 border-gray-600 text-white"
+                  : "bg-white border-gray-300 text-gray-900"
               }`}
               required
             >
               {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
+                <option key={cat}>{cat}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label
-              htmlFor="amount"
-              className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-            >
+            <label className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               Amount (₹) *
             </label>
             <input
               type="number"
-              id="amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               placeholder="0.00"
@@ -202,63 +276,58 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
               min="0"
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 darkMode
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'border-gray-300 bg-white text-gray-900'
+                  ? "bg-gray-700 border-gray-600 text-white"
+                  : "bg-white border-gray-300 text-gray-900"
               }`}
               required
             />
           </div>
 
           <div>
-            <label
-              htmlFor="date"
-              className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-            >
+            <label className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
               Date *
             </label>
+
             <input
               type="date"
-              id="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 darkMode
-                  ? 'bg-gray-700 border-gray-600 text-white'
-                  : 'border-gray-300 bg-white text-gray-900'
+                  ? "bg-gray-700 border-gray-600 text-white"
+                  : "bg-white border-gray-300 text-gray-900"
               }`}
               required
             />
           </div>
         </div>
 
+        {/* ✅ DESCRIPTION */}
         <div>
-          <label
-            htmlFor="description"
-            className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
-          >
+          <label className={`block text-sm font-medium mb-1 ${darkMode ? "text-gray-300" : "text-gray-700"}`}>
             Description
           </label>
           <textarea
-            id="description"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="What was this expense for?"
             rows={3}
+            placeholder="What was this expense for?"
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
               darkMode
-                ? 'bg-gray-700 border-gray-600 text-white'
-                : 'border-gray-300 bg-white text-gray-900'
+                ? "bg-gray-700 border-gray-600 text-white"
+                : "bg-white border-gray-300 text-gray-900"
             }`}
           />
         </div>
 
+        {/* ✅ SUBMIT BUTTON */}
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-4 rounded-md flex items-center justify-center gap-2"
         >
           <Plus size={20} />
-          {loading ? 'Adding...' : 'Add Expense'}
+          {loading ? "Adding..." : "Add Expense"}
         </button>
       </form>
     </div>
