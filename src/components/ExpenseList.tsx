@@ -123,7 +123,7 @@ export default function ExpenseList({ expenses, onExpenseChanged, darkMode }: Ex
                 Description
               </th>
               <th className={`px-3 sm:px-6 py-3 text-right font-medium uppercase tracking-wider ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                Actions
+                Action
               </th>
             </tr>
           </thead>
