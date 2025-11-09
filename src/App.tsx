@@ -8,6 +8,7 @@ import ExpenseChart from "./components/ExpenseChart";
 import Summary from "./components/Summary";
 import BottomNav from "./components/BottomNav";
 import SettingsPage from "./components/SettingsPage";
+import FilesPage from "./components/FilesPage";  // ✅ Added
 
 function App() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -37,7 +38,7 @@ function App() {
     return false;
   });
 
-  // ✅ GREETING FUNCTION
+  // ✅ Greeting logic
   const generateGreeting = () => {
     const hour = new Date().getHours();
 
@@ -47,18 +48,15 @@ function App() {
     return "Good Night";
   };
 
-  // ✅ AUTO REFRESH GREETING
   useEffect(() => {
-    setGreeting(generateGreeting()); // initial greeting
-
+    setGreeting(generateGreeting());
     const interval = setInterval(() => {
       setGreeting(generateGreeting());
     }, 60000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // ✅ EXPENSES FETCH
+  // ✅ Fetch expenses
   const fetchExpenses = async () => {
     try {
       setLoading(true);
@@ -81,13 +79,13 @@ function App() {
     fetchExpenses();
   }, []);
 
-  // ✅ Save dark mode
+  // ✅ Dark mode save
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("darkMode", String(darkMode));
   }, [darkMode]);
 
-  // ✅ Save updated profile name to localStorage
+  // ✅ Save updated profile name
   useEffect(() => {
     localStorage.setItem("profileName", profileName);
   }, [profileName]);
@@ -98,10 +96,7 @@ function App() {
         darkMode
           ? "dark bg-gray-900"
           : "bg-gradient-to-br from-gray-50 to-gray-100"
-      }
-      pt-[calc(env(safe-area-inset-top,0)+85px)]
-      pb-[calc(env(safe-area-inset-bottom,0)+24px)]
-      `}
+      } pt-[calc(env(safe-area-inset-top,0)+85px)] pb-[calc(env(safe-area-inset-bottom,0)+24px)]`}
     >
       {/* ✅ HEADER */}
       <header
@@ -139,7 +134,6 @@ function App() {
 
           {/* ✅ RIGHT BUTTONS */}
           <div className="flex items-center gap-2">
-            {/* SETTINGS */}
             <button
               onClick={() => setCurrentTab("settings")}
               className={`p-2 rounded-lg transition-colors ${
@@ -151,7 +145,6 @@ function App() {
               <Settings size={22} />
             </button>
 
-            {/* DARK MODE */}
             <button
               onClick={() => setDarkMode(!darkMode)}
               className={`p-2 rounded-lg transition-colors ${
@@ -168,23 +161,14 @@ function App() {
 
       {/* ✅ GREETING UI */}
       <div className="px-4 sm:px-6 mt-4">
-        <div
-          className={`transition-all duration-500 ${
-            darkMode ? "text-white" : "text-gray-900"
-          }`}
-        >
+        <div className={`transition-all duration-500 ${darkMode ? "text-white" : "text-gray-900"}`}>
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             {greeting},
             <span className="bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent font-extrabold">
               {profileName}
             </span>
           </h2>
-
-          <p
-            className={`mt-1 text-sm sm:text-base ${
-              darkMode ? "text-gray-400" : "text-gray-600"
-            }`}
-          >
+          <p className={`mt-1 text-sm sm:text-base ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
             Welcome back! Let's track your journey.
           </p>
         </div>
@@ -210,25 +194,15 @@ function App() {
           <div className="space-y-8">
             {currentTab === "home" && (
               <>
-                <ExpenseForm
-                  onExpenseAdded={fetchExpenses}
-                  darkMode={darkMode}
-                />
+                <ExpenseForm onExpenseAdded={fetchExpenses} darkMode={darkMode} />
                 <Summary expenses={expenses} darkMode={darkMode} />
                 <ExpenseChart expenses={expenses} darkMode={darkMode} />
-                <ExpenseList
-                  expenses={expenses}
-                  onExpenseChanged={fetchExpenses}
-                  darkMode={darkMode}
-                />
+                <ExpenseList expenses={expenses} onExpenseChanged={fetchExpenses} darkMode={darkMode} />
               </>
             )}
 
             {currentTab === "add" && (
-              <ExpenseForm
-                onExpenseAdded={fetchExpenses}
-                darkMode={darkMode}
-              />
+              <ExpenseForm onExpenseAdded={fetchExpenses} darkMode={darkMode} />
             )}
 
             {currentTab === "summary" && (
@@ -236,11 +210,12 @@ function App() {
             )}
 
             {currentTab === "history" && (
-              <ExpenseList
-                expenses={expenses}
-                onExpenseChanged={fetchExpenses}
-                darkMode={darkMode}
-              />
+              <ExpenseList expenses={expenses} onExpenseChanged={fetchExpenses} darkMode={darkMode} />
+            )}
+
+            {/* ✅ NEW FILES TAB */}
+            {currentTab === "files" && (
+              <FilesPage darkMode={darkMode} />
             )}
 
             {currentTab === "settings" && (
@@ -255,12 +230,8 @@ function App() {
         )}
       </div>
 
-      {/* ✅ BOTTOM NAV WITH SAFE-AREA SUPPORT */}
-      <BottomNav
-        currentTab={currentTab}
-        setCurrentTab={setCurrentTab}
-        darkMode={darkMode}
-      />
+      {/* ✅ BOTTOM NAV */}
+      <BottomNav currentTab={currentTab} setCurrentTab={setCurrentTab} darkMode={darkMode} />
     </div>
   );
 }

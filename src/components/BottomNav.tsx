@@ -1,4 +1,4 @@
-import { Home, PlusCircle, BarChart3, History } from "lucide-react";
+import { Home, PlusCircle, BarChart3, History, FileText } from "lucide-react";
 
 interface BottomNavProps {
   currentTab: string;
@@ -9,9 +9,11 @@ interface BottomNavProps {
 export default function BottomNav({ currentTab, setCurrentTab, darkMode }: BottomNavProps) {
   return (
     <nav
-      className={`fixed bottom-0 left-0 w-full z-40 flex items-center justify-around py-2 border-t 
-        ${darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"} 
-        shadow-lg md:hidden`}   // ✅ md:hidden = hide on tablets/desktops
+      className={`fixed bottom-0 left-0 w-full z-40 flex items-center justify-around py-2 border-t
+        ${darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"}
+        shadow-lg md:hidden
+        pb-[calc(env(safe-area-inset-bottom,0)+8px)]
+      `}
     >
       {/* ✅ HOME */}
       <button
@@ -50,6 +52,7 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
               : darkMode ? "text-gray-400" : "text-gray-600"
           }`}
         />
+
         <span
           className={`text-[11px] font-medium ${
             currentTab === "add"
@@ -74,6 +77,7 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
               : darkMode ? "text-gray-400" : "text-gray-600"
           }`}
         />
+
         <span
           className={`text-[11px] font-medium ${
             currentTab === "summary"
@@ -82,6 +86,30 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
           }`}
         >
           Summary
+        </span>
+      </button>
+
+      {/* ✅ FILES */}
+      <button
+        onClick={() => setCurrentTab("files")}
+        className="flex flex-col items-center active:scale-95 transition-transform"
+      >
+        <FileText
+          size={28}
+          className={`transition-colors ${
+            currentTab === "files"
+              ? darkMode ? "text-teal-400" : "text-teal-600"
+              : darkMode ? "text-gray-400" : "text-gray-600"
+          }`}
+        />
+        <span
+          className={`text-[11px] font-medium ${
+            currentTab === "files"
+              ? darkMode ? "text-teal-400" : "text-teal-600"
+              : darkMode ? "text-gray-400" : "text-gray-600"
+          }`}
+        >
+          Files
         </span>
       </button>
 
