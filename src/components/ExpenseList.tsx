@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Pencil, Trash2, Save, X, Search, AlertTriangle } from "lucide-react";
 import { supabase, Expense } from "../lib/supabase";
 import { downloadExpensesPDF } from "../utils/downloadPDF";
-import { useSwipeable } from "react-swipeable";
 
 interface ExpenseListProps {
   expenses: Expense[];
@@ -145,18 +144,9 @@ export default function ExpenseList({
   }: {
     exp: Expense;
   }) {
-    const handlers = useSwipeable({
-      onSwipedLeft: () => startEdit(exp),
-      onSwipedRight: () => confirmDelete(exp),
-      trackTouch: true,
-      trackMouse: false,
-      delta: 60,
-    });
-
     return (
       <tr
-        {...handlers}
-        className={`touch-pan-x transition-all ${
+        className={`transition-all ${
           darkMode ? "hover:bg-gray-700" : "hover:bg-gray-50"
         }`}
       >
