@@ -53,7 +53,7 @@ function App() {
 
     const interval = setInterval(() => {
       setGreeting(generateGreeting());
-    }, 60000); // refresh every 60 seconds
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
@@ -98,11 +98,14 @@ function App() {
         darkMode
           ? "dark bg-gray-900"
           : "bg-gradient-to-br from-gray-50 to-gray-100"
-      } pt-[85px] pb-24`}
+      }
+      pt-[calc(env(safe-area-inset-top,0)+85px)]
+      pb-[calc(env(safe-area-inset-bottom,0)+24px)]
+      `}
     >
       {/* ✅ HEADER */}
       <header
-        className={`fixed top-0 left-0 w-full z-50 px-4 sm:px-6 py-3 border-b shadow-sm ${
+        className={`fixed top-0 left-0 w-full z-50 px-4 sm:px-6 py-3 border-b shadow-sm pt-[calc(env(safe-area-inset-top,0)+12px)] ${
           darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"
         }`}
       >
@@ -163,23 +166,18 @@ function App() {
         </div>
       </header>
 
-      {/* ✅ ENHANCED GREETING UI */}
+      {/* ✅ GREETING UI */}
       <div className="px-4 sm:px-6 mt-4">
         <div
           className={`transition-all duration-500 ${
             darkMode ? "text-white" : "text-gray-900"
           }`}
         >
-          <h2
-            className={`text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2`}
-          >
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2">
             {greeting},
-            <span
-              className="bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent font-extrabold"
-            >
+            <span className="bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent font-extrabold">
               {profileName}
             </span>
-            <span className="animate-pulse"></span>
           </h2>
 
           <p
@@ -257,7 +255,7 @@ function App() {
         )}
       </div>
 
-      {/* ✅ BOTTOM NAV */}
+      {/* ✅ BOTTOM NAV WITH SAFE-AREA SUPPORT */}
       <BottomNav
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
