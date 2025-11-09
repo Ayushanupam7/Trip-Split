@@ -9,9 +9,17 @@ interface BottomNavProps {
 export default function BottomNav({ currentTab, setCurrentTab, darkMode }: BottomNavProps) {
   return (
     <nav
-      className={`fixed bottom-0 left-0 w-full z-40 flex items-center justify-around py-2 border-t
-        ${darkMode ? "bg-gray-900 border-gray-700" : "bg-white border-gray-200"}
-        shadow-lg md:hidden
+      className={`
+        fixed inset-x-0 bottom-0 z-[999] 
+        flex items-center justify-around 
+        py-2 border-t pointer-events-auto
+        backdrop-blur-md
+        ${
+          darkMode
+            ? "bg-gray-900/90 border-gray-700"
+            : "bg-white/90 border-gray-200"
+        }
+        md:hidden
         pb-[calc(env(safe-area-inset-bottom,0)+8px)]
       `}
     >
@@ -24,15 +32,23 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
           size={28}
           className={`transition-colors ${
             currentTab === "home"
-              ? darkMode ? "text-blue-400" : "text-blue-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-blue-400"
+                : "text-blue-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         />
         <span
           className={`text-[11px] font-medium ${
             currentTab === "home"
-              ? darkMode ? "text-blue-400" : "text-blue-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-blue-400"
+                : "text-blue-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         >
           Home
@@ -48,16 +64,23 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
           size={32}
           className={`transition-colors ${
             currentTab === "add"
-              ? darkMode ? "text-green-400" : "text-green-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-green-400"
+                : "text-green-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         />
-
         <span
           className={`text-[11px] font-medium ${
             currentTab === "add"
-              ? darkMode ? "text-green-400" : "text-green-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-green-400"
+                : "text-green-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         >
           Add
@@ -73,16 +96,23 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
           size={28}
           className={`transition-colors ${
             currentTab === "summary"
-              ? darkMode ? "text-purple-400" : "text-purple-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-purple-400"
+                : "text-purple-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         />
-
         <span
           className={`text-[11px] font-medium ${
             currentTab === "summary"
-              ? darkMode ? "text-purple-400" : "text-purple-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-purple-400"
+                : "text-purple-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         >
           Summary
@@ -98,15 +128,23 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
           size={28}
           className={`transition-colors ${
             currentTab === "files"
-              ? darkMode ? "text-teal-400" : "text-teal-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-teal-400"
+                : "text-teal-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         />
         <span
           className={`text-[11px] font-medium ${
             currentTab === "files"
-              ? darkMode ? "text-teal-400" : "text-teal-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-teal-400"
+                : "text-teal-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         >
           Files
@@ -122,15 +160,23 @@ export default function BottomNav({ currentTab, setCurrentTab, darkMode }: Botto
           size={28}
           className={`transition-colors ${
             currentTab === "history"
-              ? darkMode ? "text-orange-400" : "text-orange-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-orange-400"
+                : "text-orange-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         />
         <span
           className={`text-[11px] font-medium ${
             currentTab === "history"
-              ? darkMode ? "text-orange-400" : "text-orange-600"
-              : darkMode ? "text-gray-400" : "text-gray-600"
+              ? darkMode
+                ? "text-orange-400"
+                : "text-orange-600"
+              : darkMode
+              ? "text-gray-400"
+              : "text-gray-600"
           }`}
         >
           History
