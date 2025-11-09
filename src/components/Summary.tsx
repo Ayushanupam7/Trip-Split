@@ -32,8 +32,8 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
 
   // ✅ Fetch budgets from Supabase
   const fetchBudgets = async () => {
-    const { data, error } = await supabase.from("person_budgets").select("*");
-    if (!error && data) {
+    const { data } = await supabase.from("person_budgets").select("*");
+    if (data) {
       const mapped = Object.fromEntries(data.map((b) => [b.payer, b.budget]));
       setPersonBudgets(mapped);
     }
@@ -46,9 +46,9 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
 
     for (const payer of uniquePayers) {
       if (!existing.has(payer)) {
-        await supabase.from("person_budgets").insert([
-          { payer, budget: fallbackBudget },
-        ]);
+        await supabase
+          .from("person_budgets")
+          .insert([{ payer, budget: fallbackBudget }]);
       }
     }
 
@@ -128,19 +128,16 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
     return (
       <div
         className={`rounded-lg shadow-md p-8 text-center ${
-          darkMode ? "bg-gray-800" : "bg-white"
+          darkMode ? "bg-gray-800 text-gray-400" : "bg-white text-gray-500"
         }`}
       >
-        <p className={darkMode ? "text-gray-400" : "text-gray-500"}>
-          Add expenses to see the summary.
-        </p>
+        Add expenses to see the summary.
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-
       {/* ✅ Mobile Swipeable Cards */}
       <div className="sm:hidden w-full overflow-hidden" {...handlers}>
         <div
@@ -154,16 +151,13 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
               >
                 <div className="absolute inset-0 bg-black/10 rounded-2xl pointer-events-none"></div>
 
-                {/* ✅ Title + Icon */}
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-medium">{card.title}</h3>
                   {card.icon}
                 </div>
 
-                {/* ✅ Value */}
                 <p className="text-4xl font-bold mt-2">{card.value}</p>
 
-                {/* ✅ Progress bar */}
                 <div className="w-full bg-white/30 rounded-full h-3 mt-4">
                   <div
                     className="h-3 rounded-full bg-white transition-all"
@@ -175,7 +169,7 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
           ))}
         </div>
 
-        {/* ✅ Swipe indicators */}
+        {/* ✅ Indicators */}
         <div className="flex justify-center mt-3 gap-2">
           {cards.map((_, i) => (
             <div
@@ -188,7 +182,7 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
         </div>
       </div>
 
-      {/* ✅ Desktop Grid Cards */}
+      {/* ✅ Desktop Grid */}
       <div className="hidden sm:grid grid-cols-4 gap-6">
         {cards.map((card, i) => (
           <div
@@ -199,19 +193,22 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
               <h3 className="text-sm font-medium opacity-90">{card.title}</h3>
               {card.icon}
             </div>
+
             <p className="text-3xl font-bold mt-2">{card.value}</p>
 
             <div className="w-full bg-white/30 rounded-full h-3 mt-4">
               <div
                 className="h-3 rounded-full bg-white"
-                style={{ width: `${Math.min(card.percent, 100)}%` }}
+                style={{
+                  width: `${Math.min(card.percent, 100)}%`,
+                }}
               ></div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ✅ Edit budgets button */}
+      {/* ✅ Edit Button */}
       <button
         onClick={() => setBudgetModalOpen(true)}
         className={`${
@@ -221,7 +218,7 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
         <Pencil size={16} /> Edit Budget Per Person
       </button>
 
-      {/* ✅ Budget vs Spent section */}
+      {/* ✅ Budget vs Spent */}
       <div
         className={`rounded-xl shadow-md p-4 ${
           darkMode ? "bg-gray-800" : "bg-white"
@@ -241,55 +238,73 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
             const budget = personBudgets[payer] ?? fallbackBudget;
             const remain = budget - spent;
 
+            const percentage = budget > 0 ? (spent / budget) * 100 : 0;
+            const progressWidth = Math.min(percentage, 100);
+
             return (
               <div
                 key={payer}
-                className={`p-3 rounded-lg border flex justify-between ${
+                className={`p-4 rounded-lg border flex flex-col gap-2 ${
                   darkMode
                     ? "bg-gray-700 border-gray-600"
                     : "bg-gray-50 border-gray-200"
                 }`}
               >
                 <span
-                  className={`font-medium ${
+                  className={`text-lg font-semibold ${
                     darkMode ? "text-gray-100" : "text-gray-800"
                   }`}
                 >
                   {payer}
                 </span>
 
-                <div className="text-right">
-                  <p
-                    className={`text-xs ${
-                      darkMode ? "text-gray-300" : "text-gray-600"
+                <p
+                  className={`text-xs ${
+                    darkMode ? "text-gray-300" : "text-gray-600"
+                  }`}
+                >
+                  Budget: ₹{budget.toFixed(2)}
+                </p>
+
+                <p
+                  className={`text-sm font-semibold ${
+                    darkMode ? "text-gray-200" : "text-gray-900"
+                  }`}
+                >
+                  Spent: ₹{spent.toFixed(2)}
+                </p>
+
+                <div
+                  className={`w-full h-3 rounded-full overflow-hidden ${
+                    darkMode ? "bg-gray-600" : "bg-gray-300"
+                  }`}
+                >
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      remain >= 0
+                        ? "bg-gradient-to-r from-green-400 to-green-500"
+                        : "bg-gradient-to-r from-red-500 to-red-700"
                     }`}
-                  >
-                    Budget: ₹{budget.toFixed(2)}
-                  </p>
-                  <p
-                    className={`font-semibold ${
-                      darkMode ? "text-gray-200" : "text-gray-900"
-                    }`}
-                  >
-                    Spent: ₹{spent.toFixed(2)}
-                  </p>
-                  <p
-                    className={`text-xs ${
-                      remain >= 0 ? "text-green-400" : "text-red-400"
-                    }`}
-                  >
-                    {remain >= 0
-                      ? `Remaining: ₹${remain.toFixed(2)}`
-                      : `Over by ₹${Math.abs(remain).toFixed(2)}`}
-                  </p>
+                    style={{ width: `${progressWidth}%` }}
+                  ></div>
                 </div>
+
+                <p
+                  className={`text-xs ${
+                    remain >= 0 ? "text-green-400" : "text-red-400"
+                  }`}
+                >
+                  {remain >= 0
+                    ? `Remaining: ₹${remain.toFixed(2)}`
+                    : `Over by ₹${Math.abs(remain).toFixed(2)}`}
+                </p>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* ✅ Budget Edit Modal */}
+      {/* ✅ Budget Modal */}
       {budgetModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
           <div
@@ -327,7 +342,7 @@ export default function Summary({ expenses, darkMode }: SummaryProps) {
                     className={`w-full px-3 py-2 border rounded-md ${
                       darkMode
                         ? "bg-gray-700 border-gray-600 text-white"
-                        : "bg-white border-gray-300 text-gray-900"
+                        : "bg-gray-50 border-gray-300 text-gray-900"
                     }`}
                   />
                 </div>

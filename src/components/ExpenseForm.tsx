@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -11,12 +11,52 @@ const categories = ['Food', 'Travel', 'Hotel', 'Tickets', 'Entertainment', 'Shop
 
 export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormProps) {
   const [payer, setPayer] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [allPayers, setAllPayers] = useState<string[]>([]);
+
   const [category, setCategory] = useState('Food');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // ✅ Fetch past payer names
+  useEffect(() => {
+    const fetchPayers = async () => {
+      const { data, error } = await supabase
+        .from('expenses')
+        .select('payer')
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        const unique = [...new Set(data.map((item) => item.payer.trim()))];
+        setAllPayers(unique);
+      }
+    };
+
+    fetchPayers();
+  }, []);
+
+  // ✅ Filter suggestions when typing
+  useEffect(() => {
+    if (payer.trim() === '') {
+      setSuggestions([]);
+      return;
+    }
+
+    const filtered = allPayers.filter((name) =>
+      name.toLowerCase().includes(payer.toLowerCase())
+    );
+
+    setSuggestions(filtered);
+  }, [payer, allPayers]);
+
+  const handleSelectSuggestion = (name: string) => {
+    setPayer(name);
+    setShowSuggestions(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,17 +70,15 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
     setLoading(true);
 
     try {
-      const { error: insertError } = await supabase
-        .from('expenses')
-        .insert([
-          {
-            payer: payer.trim(),
-            category,
-            amount: parseFloat(amount),
-            description: description.trim(),
-            date: new Date(date).toISOString(),
-          },
-        ]);
+      const { error: insertError } = await supabase.from('expenses').insert([
+        {
+          payer: payer.trim(),
+          category,
+          amount: parseFloat(amount),
+          description: description.trim(),
+          date: new Date(date).toISOString(),
+        },
+      ]);
 
       if (insertError) throw insertError;
 
@@ -50,8 +88,8 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
       setDescription('');
       setDate(new Date().toISOString().split('T')[0]);
       onExpenseAdded();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add expense');
+    } catch (err: any) {
+      setError(err.message || 'Failed to add expense');
     } finally {
       setLoading(false);
     }
@@ -59,6 +97,7 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
 
   return (
     <div className={`rounded-lg shadow-md p-4 sm:p-6 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+      
       <h2 className={`text-xl sm:text-2xl font-bold mb-4 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
         Add New Expense
       </h2>
@@ -70,26 +109,61 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+
+        {/* ✅ PAYER SUGGESTION FIELD */}
+        <div className="relative">
+          <label
+            htmlFor="payer"
+            className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+          >
+            Payer Name *
+          </label>
+
+          <input
+            type="text"
+            id="payer"
+            value={payer}
+            onChange={(e) => {
+              setPayer(e.target.value);
+              setShowSuggestions(true);
+            }}
+            placeholder="Who paid?"
+            autoComplete="off"
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              darkMode
+                ? 'bg-gray-700 border-gray-600 text-white'
+                : 'border-gray-300 bg-white text-gray-900'
+            }`}
+            required
+          />
+
+          {/* ✅ Suggestion Dropdown */}
+          {showSuggestions && suggestions.length > 0 && (
+            <ul
+              className={`absolute z-20 w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-md mt-1 shadow-lg max-h-40 overflow-auto`}
+            >
+              {suggestions.map((name, index) => (
+                <li
+                  key={index}
+                  onClick={() => handleSelectSuggestion(name)}
+                  className={`px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 ${
+                    darkMode ? 'text-white' : 'text-gray-700'
+                  }`}
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* ✅ REST OF INPUTS SAME AS YOUR ORIGINAL CODE */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="payer" className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Payer Name *
-            </label>
-            <input
-              type="text"
-              id="payer"
-              value={payer}
-              onChange={(e) => setPayer(e.target.value)}
-              placeholder="Who paid?"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'
-              }`}
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="category" className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label
+              htmlFor="category"
+              className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            >
               Category *
             </label>
             <select
@@ -97,7 +171,9 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
               value={category}
               onChange={(e) => setCategory(e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'
+                darkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'border-gray-300 bg-white text-gray-900'
               }`}
               required
             >
@@ -110,7 +186,10 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
           </div>
 
           <div>
-            <label htmlFor="amount" className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label
+              htmlFor="amount"
+              className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            >
               Amount (₹) *
             </label>
             <input
@@ -122,14 +201,19 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
               step="0.01"
               min="0"
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'
+                darkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'border-gray-300 bg-white text-gray-900'
               }`}
               required
             />
           </div>
 
           <div>
-            <label htmlFor="date" className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+            <label
+              htmlFor="date"
+              className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            >
               Date *
             </label>
             <input
@@ -138,7 +222,9 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'
+                darkMode
+                  ? 'bg-gray-700 border-gray-600 text-white'
+                  : 'border-gray-300 bg-white text-gray-900'
               }`}
               required
             />
@@ -146,7 +232,10 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
         </div>
 
         <div>
-          <label htmlFor="description" className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <label
+            htmlFor="description"
+            className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+          >
             Description
           </label>
           <textarea
@@ -156,7 +245,9 @@ export default function ExpenseForm({ onExpenseAdded, darkMode }: ExpenseFormPro
             placeholder="What was this expense for?"
             rows={3}
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none ${
-              darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'border-gray-300 bg-white text-gray-900'
+              darkMode
+                ? 'bg-gray-700 border-gray-600 text-white'
+                : 'border-gray-300 bg-white text-gray-900'
             }`}
           />
         </div>
