@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Save, Info, ChevronDown, ChevronUp } from "lucide-react";
 
 interface SettingsPageProps {
@@ -15,7 +15,39 @@ export default function SettingsPage({
   setProfileName
 }: SettingsPageProps) {
   const [nameInput, setNameInput] = useState(profileName);
-  const [showAbout, setShowAbout] = useState(false); // ✅ toggle state
+  const [showAbout, setShowAbout] = useState(false);
+
+  // ⭐ swipe tracking refs
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  // ⭐ Enable swipe-back only on mobile (screen < 768px)
+  useEffect(() => {
+    if (window.innerWidth >= 768) return; // desktop: disable swipe gesture
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX.current = e.changedTouches[0].clientX;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      touchEndX.current = e.changedTouches[0].clientX;
+
+      const distance = touchEndX.current - touchStartX.current;
+
+      // if user swipes from left to right (60px threshold)
+      if (distance > 60) {
+        onBack();
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart);
+    window.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [onBack]);
 
   const saveName = () => {
     if (!nameInput.trim()) return;
@@ -28,15 +60,11 @@ export default function SettingsPage({
         darkMode ? "bg-gray-800 text-white" : "bg-white text-gray-800"
       }`}
     >
-      {/* Back button (hidden on mobile) */}
+      {/* Back button (hidden on mobile, since swipe exists) */}
       <button
         onClick={onBack}
         className={`hidden md:flex items-center gap-2 mb-4 px-4 py-2 rounded-lg text-sm font-medium
-        ${
-          darkMode
-            ? "bg-gray-700 hover:bg-gray-600"
-            : "bg-gray-200 hover:bg-gray-300"
-        }`}
+        ${darkMode ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-200 hover:bg-gray-300"}`}
       >
         <ArrowLeft size={18} />
         Back Home
@@ -68,7 +96,7 @@ export default function SettingsPage({
         Save
       </button>
 
-      {/* ✅ ABOUT SECTION (EXPANDABLE) */}
+      {/* ABOUT SECTION (dropdown) */}
       <div
         className={`mt-6 p-4 rounded-xl border shadow-sm ${
           darkMode
@@ -76,7 +104,6 @@ export default function SettingsPage({
             : "bg-gray-100 border-gray-300 text-gray-800"
         }`}
       >
-        {/* Header clickable */}
         <div
           onClick={() => setShowAbout(!showAbout)}
           className="flex items-center justify-between cursor-pointer"
@@ -89,13 +116,11 @@ export default function SettingsPage({
           {showAbout ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </div>
 
-        {/* Expanded content */}
         {showAbout && (
           <div className="mt-3 border-t pt-3 text-sm space-y-2">
             <p className="opacity-90 leading-relaxed">
-              Trip Expense helps you easily record, track, and split expenses
-              while traveling with friends or family. Keep your budget organized
-              with summaries, charts, and a clean UI.
+              Trip Expense helps you record and split expenses while traveling.
+              View charts, summaries, and keep everything neatly organized.
             </p>
 
             <p className="opacity-90">
@@ -108,11 +133,8 @@ export default function SettingsPage({
 
             <p className="opacity-90">
               <span className="font-semibold">Technologies Used:</span>
-              <br />• React + Vite <br />• TypeScript <br />• Tailwind CSS <br />• Supabase (for data & backend) <br />• Lucide Icons
-            </p>
-
-            <p className="opacity-90">
-              Designed for simplicity, speed, and smooth user experience.
+              <br />• React + Vite <br />• TypeScript <br />• Tailwind CSS
+              <br />• Supabase <br />• Lucide Icons
             </p>
           </div>
         )}
